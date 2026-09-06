@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jogo do Botão</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+    }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+      color: white;
+      text-align: center;
+      padding: 20px;
+      overflow-x: hidden;
+      transition: background 0.8s ease;
+      position: relative;
+    }
+
+    .flash {
+      position: fixed;
+      inset: 0;
+      background: #ff0033;
+      opacity: 0;
+      pointer-events: none;
+      z-index: 100;
+      transition: opacity 0.15s;
+    }
+    .flash.show { opacity: 0.35; }
+
+    h1 {
+      font-size: 2.1rem;
+      margin-bottom: 6px;
+      text-shadow: 0 0 15px currentColor;
+      transition: color 0.5s;
+    }
+
+    .score {
+      font-size: 4.2rem;
+      font-weight: bold;
+      margin: 8px 0 4px;
+      color: #00ffcc;
+      text-shadow: 0 0 25px currentColor;
+      transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.5s;
+    }
+    .score.pop { transform: scale(1.25); }
+
+    .recorde {
+      font-size: 1.25rem;
+      margin-bottom: 8px;
+      color: #ffd700;
+    }
+
+    .chance {
+      font-size: 1.15rem;
+      margin-bottom: 18px;
+      color: #ff6b6b;
+    }
+
+    button#btn {
+      width: 200px;
+      height: 200px;
+      border-radius: 50%;
+      border: none;
+      background: linear-gradient(145deg, #00ffcc, #00b894);
+      color: #0f0c29;
+      font-size: 1.7rem;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 10px 30px rgba(0, 255, 204, 0.45);
+      transition: all 0.3s ease;
+      user-select: none;
+      position: relative;
+      overflow: hidden;
+    }
+    button#btn:hover {
+      filter: brightness(1.12);
+      transform: scale(1.03);
+    }
+    button#btn:active {
+      transform: scale(0.92);
+    }
+
+    .ripple {
+      position: absolute;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.45);
+      transform: scale(0);
+      animation: ripple 0.6s linear;
+      pointer-events: none;
+    }
+    @keyframes ripple {
+      to { transform: scale(4); opacity: 0; }
+    }
+
+    .reset-msg, .recorde-msg, .critico-msg {
+      margin-top: 16px;
+      font-size: 1.35rem;
+      font-weight: bold;
+      height: 28px;
+      opacity: 0;
+      transition: opacity 0.3s, transform 0.3s;
+      transform: translateY(10px);
+    }
+    .reset-msg { color: #ff4d4d; text-shadow: 0 0 15px #ff0000; }
+    .recorde-msg { color: #ffd700; text-shadow: 0 0 20px #ffd700; }
+    .critico-msg { color: #ff9ff3; text-shadow: 0 0 15px #ff9ff3; }
+    .reset-msg.show, .recorde-msg.show, .critico-msg.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* ===== UPGRADES ===== */
+    .upgrades {
+      margin-top: 28px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      justify-content: center;
+      max-width: 700px;
+    }
+
+    .upgrade-btn {
+      background: rgba(255,255,255,0.08);
+      border: 2px solid rgba(255,255,255,0.15);
+      color: white;
+      padding: 12px 16px;
+      border-radius: 12px;
+      cursor: pointer;
+      font-size: 0.95rem;
+      min-width: 180px;
+      transition: all 0.2s;
+      text-align: left;
+    }
+    .upgrade-btn:hover {
+      background: rgba(255,255,255,0.15);
+      transform: translateY(-2px);
+    }
+    .upgrade-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .upgrade-btn .preco {
+      display: block;
+      font-size: 0.85rem;
+      color: #00ffcc;
+      margin-top: 4px;
+    }
+
+    .info {
+      margin-top: 22px;
+      font-size: 0.9rem;
+      opacity: 0.65;
+      max-width: 420px;
+      line-height: 1.5;
+    }
+
+    .particle {
+      position: fixed;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 50;
+    }
+
+    /* Temas */
+    body.tema-1 { background: linear-gradient(135deg, #0f0c29, #302b63, #24243e); }
+    body.tema-2 { background: linear-gradient(135deg, #1a2a6c, #2a5298, #1e3c72); }
+    body.tema-3 { background: linear-gradient(135deg, #4a00e0, #8e2de2, #3a1c71); }
+    body.tema-4 { background: linear-gradient(135deg, #c31432, #240b36, #8e0e00); }
+    body.tema-5 { background: linear-gradient(135deg, #f12711, #f5af19, #c94b00); }
+    body.tema-6 { background: linear-gradient(135deg, #0f2027, #203a43, #2c5364); }
+    body.tema-7 { background: linear-gradient(135deg, #1f1c2c, #928dab, #3a2f4d); }
+    body.tema-8 { background: linear-gradient(135deg, #000000, #434343, #1a1a1a); }
+
+    /* ===== LOGIN ===== */
+    #telaLogin {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.85);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+    }
+    .login-box {
+      background: #1a1a2e;
+      padding: 40px;
+      border-radius: 20px;
+      width: 90%;
+      max-width: 380px;
+      box-shadow: 0 0 40px rgba(0,255,204,0.2);
+    }
+    .login-box h2 {
+      margin-bottom: 20px;
+      color: #00ffcc;
+    }
+    .login-box input {
+      width: 100%;
+      padding: 14px;
+      border-radius: 10px;
+      border: none;
+      font-size: 1.1rem;
+      margin-bottom: 18px;
+      text-align: center;
+    }
+    .login-box button {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 10px;
+      background: linear-gradient(145deg, #00ffcc, #00b894);
+      color: #0f0c29;
+      font-size: 1.1rem;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    /* ===== RANKING ===== */
+    #rankingBtn {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: rgba(255,255,255,0.1);
+      border: 2px solid rgba(255,255,255,0.2);
+      color: white;
+      padding: 10px 18px;
+      border-radius: 30px;
+      cursor: pointer;
+      font-size: 0.95rem;
+      z-index: 50;
+    }
+    #rankingBtn:hover {
+      background: rgba(255,255,255,0.2);
+    }
+
+    #telaRanking {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.9);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 150;
+    }
+    .ranking-box {
+      background: #1a1a2e;
+      padding: 30px;
+      border-radius: 20px;
+      width: 90%;
+      max-width: 420px;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+    .ranking-box h2 {
+      color: #ffd700;
+      margin-bottom: 20px;
+    }
+    .ranking-lista {
+      list-style: none;
+      text-align: left;
+    }
+    .ranking-lista li {
+      padding: 12px 15px;
+      margin-bottom: 8px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .ranking-lista li:nth-child(1) { background: rgba(255, 215, 0, 0.15); border: 1px solid #ffd700; }
+    .ranking-lista li:nth-child(2) { background: rgba(192, 192, 192, 0.1); }
+    .ranking-lista li:nth-child(3) { background: rgba(205, 127, 50, 0.1); }
+    .posicao {
+      font-weight: bold;
+      width: 30px;
+    }
+    .fechar-ranking {
+      margin-top: 20px;
+      padding: 12px 30px;
+      border: none;
+      border-radius: 10px;
+      background: #ff6b6b;
+      color: white;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+
+    .jogador-info {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      background: rgba(0,0,0,0.4);
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 0.95rem;
+    }
+  </style>
+</head>
+<body class="tema-1">
+  <!-- TELA DE LOGIN -->
+  <div id="telaLogin">
+    <div class="login-box">
+      <h2>Entrar no Jogo</h2>
+      <input type="text" id="inputApelido" placeholder="Digite seu apelido" maxlength="12" autocomplete="off">
+      <button id="btnEntrar">JOGAR</button>
+    </div>
+  </div>
+
+  <!-- TELA DE RANKING -->
+  <div id="telaRanking">
+    <div class="ranking-box">
+      <h2>🏆 Ranking Local</h2>
+      <ul class="ranking-lista" id="listaRanking"></ul>
+      <button class="fechar-ranking" id="fecharRanking">Fechar</button>
+    </div>
+  </div>
+
+  <div class="flash" id="flash"></div>
+
+  <div class="jogador-info" id="jogadorInfo" style="display:none;"></div>
+  <button id="rankingBtn" style="display:none;">🏆 Ranking</button>
+
+  <h1 id="titulo">Jogo do Botão</h1>
+  
+  <div class="score" id="score">0</div>
+  <div class="recorde">🏆 Recorde: <span id="recorde">0</span></div>
+  <div class="chance">Chance de reset: <span id="chance">0.001</span>%</div>
+  
+  <button id="btn">CLICAR</button>
+  
+  <div class="reset-msg" id="resetMsg">💥 RESETADO!</div>
+  <div class="recorde-msg" id="recordeMsg">🎉 NOVO RECORDE!</div>
+  <div class="critico-msg" id="criticoMsg">⚡ CRÍTICO!</div>
+
+  <div class="upgrades">
+    <button class="upgrade-btn" id="upPontos">
+      +1 Ponto por Clique
+      <span class="preco">Custo: <span id="custoPontos">50</span></span>
+    </button>
+    <button class="upgrade-btn" id="upSorte">
+      Reduz Chance de Reset
+      <span class="preco">Custo: <span id="custoSorte">80</span></span>
+    </button>
+    <button class="upgrade-btn" id="upCritico">
+      Chance de Crítico (+50%)
+      <span class="preco">Custo: <span id="custoCritico">120</span></span>
+    </button>
+  </div>
+
+  <div class="info">
+    A cada 10 pontos o visual muda.<br>
+    Upgrades e ranking são salvos automaticamente.
+  </div>
+
+  <script>
+    // ========== ESTADO ==========
+    let score = 0;
+    let recorde = Number(localStorage.getItem('recordeBotao')) || 0;
+    let apelido = localStorage.getItem('apelidoBotao') || '';
+
+    let pontosPorClique = Number(localStorage.getItem('upPontos')) || 1;
+    let reducaoReset = Number(localStorage.getItem('upSorte')) || 0;
+    let chanceCritico = Number(localStorage.getItem('upCritico')) || 0;
+
+    let custoPontos = Number(localStorage.getItem('custoPontos')) || 50;
+    let custoSorte = Number(localStorage.getItem('custoSorte')) || 80;
+    let custoCritico = Number(localStorage.getItem('custoCritico')) || 120;
+
+    // Ranking
+    let ranking = JSON.parse(localStorage.getItem('rankingBotao')) || [];
+
+    // Elementos
+    const scoreEl = document.getElementById('score');
+    const recordeEl = document.getElementById('recorde');
+    const chanceEl = document.getElementById('chance');
+    const btn = document.getElementById('btn');
+    const resetMsg = document.getElementById('resetMsg');
+    const recordeMsg = document.getElementById('recordeMsg');
+    const criticoMsg = document.getElementById('criticoMsg');
+    const flash = document.getElementById('flash');
+    const titulo = document.getElementById('titulo');
+    const telaLogin = document.getElementById('telaLogin');
+    const telaRanking = document.getElementById('telaRanking');
+    const jogadorInfo = document.getElementById('jogadorInfo');
+    const rankingBtn = document.getElementById('rankingBtn');
+
+    // ========== LOGIN ==========
+    if (apelido) {
+      // Já tem apelido salvo
+      telaLogin.style.display = 'none';
+      rankingBtn.style.display = 'block';
+      jogadorInfo.style.display = 'block';
+      jogadorInfo.textContent = `👤 ${apelido}`;
+    }
+
+    document.getElementById('btnEntrar').addEventListener('click', () => {
+      const nome = document.getElementById('inputApelido').value.trim();
+      if (nome.length < 2) {
+        alert('Digite um apelido com pelo menos 2 letras');
+        return;
+      }
+      apelido = nome;
+      localStorage.setItem('apelidoBotao', apelido);
+      telaLogin.style.display = 'none';
+      rankingBtn.style.display = 'block';
+      jogadorInfo.style.display = 'block';
+      jogadorInfo.textContent = `👤 ${apelido}`;
+    });
+
+    // ========== RANKING ==========
+    function atualizarRanking() {
+      // Atualiza ou adiciona o jogador
+      const index = ranking.findIndex(p => p.nome === apelido);
+      if (index >= 0) {
+        if (recorde > ranking[index].pontos) {
+          ranking[index].pontos = recorde;
+        }
+      } else {
+        ranking.push({ nome: apelido, pontos: recorde });
+      }
+
+      // Ordena e mantém só top 10
+      ranking.sort((a, b) => b.pontos - a.pontos);
+      ranking = ranking.slice(0, 10);
+      localStorage.setItem('rankingBotao', JSON.stringify(ranking));
+    }
+
+    function mostrarRanking() {
+      const lista = document.getElementById('listaRanking');
+      lista.innerHTML = '';
+
+      if (ranking.length === 0) {
+        lista.innerHTML = '<li style="justify-content:center">Nenhum recorde ainda</li>';
+      } else {
+        ranking.forEach((p, i) => {
+          const li = document.createElement('li');
+          li.innerHTML = `
+            <span class="posicao">${i + 1}º</span>
+            <span>${p.nome}</span>
+            <span style="color:#00ffcc">${p.pontos}</span>
+          `;
+          lista.appendChild(li);
+        });
+      }
+      telaRanking.style.display = 'flex';
+    }
+
+    rankingBtn.addEventListener('click', mostrarRanking);
+    document.getElementById('fecharRanking').addEventListener('click', () => {
+      telaRanking.style.display = 'none';
+    });
+
+    // ========== SOM ==========
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+    function tocarSom(tipo) {
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      const agora = audioCtx.currentTime;
+
+      if (tipo === 'click') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(600, agora);
+        osc.frequency.exponentialRampToValueAtTime(300, agora + 0.08);
+        gain.gain.setValueAtTime(0.12, agora);
+        gain.gain.exponentialRampToValueAtTime(0.001, agora + 0.08);
+        osc.start(agora); osc.stop(agora + 0.08);
+      }
+      if (tipo === 'reset') {
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(160, agora);
+        osc.frequency.exponentialRampToValueAtTime(50, agora + 0.35);
+        gain.gain.setValueAtTime(0.22, agora);
+        gain.gain.exponentialRampToValueAtTime(0.001, agora + 0.35);
+        osc.start(agora); osc.stop(agora + 0.35);
+      }
+      if (tipo === 'recorde') {
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(520, agora);
+        osc.frequency.setValueAtTime(680, agora + 0.08);
+        osc.frequency.setValueAtTime(840, agora + 0.16);
+        gain.gain.setValueAtTime(0.18, agora);
+        gain.gain.exponentialRampToValueAtTime(0.001, agora + 0.35);
+        osc.start(agora); osc.stop(agora + 0.35);
+      }
+      if (tipo === 'critico') {
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(400, agora);
+        osc.frequency.setValueAtTime(700, agora + 0.1);
+        gain.gain.setValueAtTime(0.15, agora);
+        gain.gain.exponentialRampToValueAtTime(0.001, agora + 0.2);
+        osc.start(agora); osc.stop(agora + 0.2);
+      }
+      if (tipo === 'upgrade') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(300, agora);
+        osc.frequency.exponentialRampToValueAtTime(600, agora + 0.2);
+        gain.gain.setValueAtTime(0.15, agora);
+        gain.gain.exponentialRampToValueAtTime(0.001, agora + 0.25);
+        osc.start(agora); osc.stop(agora + 0.25);
+      }
+    }
+
+    function getResetChance(currentScore) {
+      let base = 0.001 + (currentScore * 0.15);
+      base = base * (1 - reducaoReset);
+      return Math.min(100, base);
+    }
+
+    function atualizarTema() {
+      const nivel = Math.floor(score / 10);
+      const temas = [
+        { classe: 'tema-1', cor: '#00ffcc', botao: 'linear-gradient(145deg, #00ffcc, #00b894)' },
+        { classe: 'tema-2', cor: '#4fc3f7', botao: 'linear-gradient(145deg, #4fc3f7, #0288d1)' },
+        { classe: 'tema-3', cor: '#ce93d8', botao: 'linear-gradient(145deg, #ce93d8, #8e24aa)' },
+        { classe: 'tema-4', cor: '#ef5350', botao: 'linear-gradient(145deg, #ef5350, #c62828)' },
+        { classe: 'tema-5', cor: '#ffb74d', botao: 'linear-gradient(145deg, #ffb74d, #ef6c00)' },
+        { classe: 'tema-6', cor: '#80cbc4', botao: 'linear-gradient(145deg, #80cbc4, #00695c)' },
+        { classe: 'tema-7', cor: '#b39ddb', botao: 'linear-gradient(145deg, #b39ddb, #5e35b1)' },
+        { classe: 'tema-8', cor: '#ffd54f', botao: 'linear-gradient(145deg, #ffd54f, #ff8f00)' }
+      ];
+      const tema = temas[Math.min(nivel, temas.length - 1)];
+      document.body.className = tema.classe;
+      scoreEl.style.color = tema.cor;
+      titulo.style.color = tema.cor;
+      btn.style.background = tema.botao;
+      btn.style.boxShadow = `0 10px 30px ${tema.cor}66`;
+    }
+
+    function criarParticulas(x, y, cor, qtd = 18) {
+      for (let i = 0; i < qtd; i++) {
+        const p = document.createElement('div');
+        p.className = 'particle';
+        p.style.left = x + 'px';
+        p.style.top = y + 'px';
+        p.style.background = cor;
+        p.style.boxShadow = `0 0 8px ${cor}`;
+        const angulo = Math.random() * Math.PI * 2;
+        const vel = 4 + Math.random() * 9;
+        const vx = Math.cos(angulo) * vel;
+        const vy = Math.sin(angulo) * vel;
+        document.body.appendChild(p);
+        let vida = 1;
+        const anim = () => {
+          vida -= 0.02;
+          if (vida <= 0) { p.remove(); return; }
+          p.style.left = (parseFloat(p.style.left) + vx) + 'px';
+          p.style.top = (parseFloat(p.style.top) + vy) + 'px';
+          p.style.opacity = vida;
+          p.style.transform = `scale(${vida})`;
+          requestAnimationFrame(anim);
+        };
+        requestAnimationFrame(anim);
+      }
+    }
+
+    // ========== CLIQUE ==========
+    btn.addEventListener('click', (e) => {
+      const rect = btn.getBoundingClientRect();
+      const ripple = document.createElement('span');
+      ripple.className = 'ripple';
+      const size = Math.max(rect.width, rect.height);
+      ripple.style.width = ripple.style.height = size + 'px';
+      ripple.style.left = (e.clientX - rect.left - size / 2) + 'px';
+      ripple.style.top = (e.clientY - rect.top - size / 2) + 'px';
+      btn.appendChild(ripple);
+      setTimeout(() => ripple.remove(), 600);
+
+      const chance = getResetChance(score);
+      const roll = Math.random() * 100;
+
+      if (roll < chance) {
+        score = 0;
+        tocarSom('reset');
+        flash.classList.add('show');
+        document.body.style.transform = 'translate(5px, -4px)';
+        setTimeout(() => document.body.style.transform = 'translate(-4px, 3px)', 50);
+        setTimeout(() => {
+          document.body.style.transform = 'translate(0,0)';
+          flash.classList.remove('show');
+        }, 160);
+        resetMsg.classList.add('show');
+        setTimeout(() => resetMsg.classList.remove('show'), 1400);
+        criarParticulas(window.innerWidth/2, window.innerHeight/2, '#ff3355', 28);
+        atualizarTema();
+      } else {
+        let ganho = pontosPorClique;
+        let foiCritico = false;
+        if (Math.random() < chanceCritico) {
+          ganho *= 2;
+          foiCritico = true;
+        }
+        score += ganho;
+        tocarSom(foiCritico ? 'critico' : 'click');
+        scoreEl.classList.add('pop');
+        setTimeout(() => scoreEl.classList.remove('pop'), 160);
+
+        if (foiCritico) {
+          criticoMsg.classList.add('show');
+          setTimeout(() => criticoMsg.classList.remove('show'), 900);
+          criarParticulas(window.innerWidth/2, window.innerHeight/2 - 60, '#ff9ff3', 20);
+        }
+
+        if (score > recorde) {
+          recorde = score;
+          localStorage.setItem('recordeBotao', recorde);
+          recordeEl.textContent = recorde;
+          tocarSom('recorde');
+          recordeMsg.classList.add('show');
+          setTimeout(() => recordeMsg.classList.remove('show'), 1500);
+          criarParticulas(window.innerWidth/2, window.innerHeight/2 - 80, '#ffd700', 32);
+          atualizarRanking(); // Atualiza o ranking
+        }
+        atualizarTema();
+      }
+
+      scoreEl.textContent = score;
+      chanceEl.textContent = getResetChance(score).toFixed(3);
+      atualizarBotoesUpgrade();
+    });
+
+    // ========== UPGRADES ==========
+    function atualizarBotoesUpgrade() {
+      document.getElementById('upPontos').disabled = score < custoPontos;
+      document.getElementById('upSorte').disabled = score < custoSorte || reducaoReset >= 0.6;
+      document.getElementById('upCritico').disabled = score < custoCritico || chanceCritico >= 0.45;
+    }
+
+    document.getElementById('upPontos').addEventListener('click', () => {
+      if (score < custoPontos) return;
+      score -= custoPontos;
+      pontosPorClique++;
+      custoPontos = Math.floor(custoPontos * 1.7);
+      localStorage.setItem('upPontos', pontosPorClique);
+      localStorage.setItem('custoPontos', custoPontos);
+      document.getElementById('custoPontos').textContent = custoPontos;
+      scoreEl.textContent = score;
+      tocarSom('upgrade');
+      atualizarBotoesUpgrade();
+    });
+
+    document.getElementById('upSorte').addEventListener('click', () => {
+      if (score < custoSorte || reducaoReset >= 0.6) return;
+      score -= custoSorte;
+      reducaoReset = Math.min(0.6, reducaoReset + 0.08);
+      custoSorte = Math.floor(custoSorte * 1.8);
+      localStorage.setItem('upSorte', reducaoReset);
+      localStorage.setItem('custoSorte', custoSorte);
+      document.getElementById('custoSorte').textContent = custoSorte;
+      scoreEl.textContent = score;
+      chanceEl.textContent = getResetChance(score).toFixed(3);
+      tocarSom('upgrade');
+      atualizarBotoesUpgrade();
+    });
+
+    document.getElementById('upCritico').addEventListener('click', () => {
+      if (score < custoCritico || chanceCritico >= 0.45) return;
+      score -= custoCritico;
+      chanceCritico = Math.min(0.45, chanceCritico + 0.07);
+      custoCritico = Math.floor(custoCritico * 1.85);
+      localStorage.setItem('upCritico', chanceCritico);
+      localStorage.setItem('custoCritico', custoCritico);
+      document.getElementById('custoCritico').textContent = custoCritico;
+      scoreEl.textContent = score;
+      tocarSom('upgrade');
+      atualizarBotoesUpgrade();
+    });
+
+    // Inicialização
+    recordeEl.textContent = recorde;
+    document.getElementById('custoPontos').textContent = custoPontos;
+    document.getElementById('custoSorte').textContent = custoSorte;
+    document.getElementById('custoCritico').textContent = custoCritico;
+    atualizarTema();
+    atualizarBotoesUpgrade();
+    if (apelido) atualizarRanking();
+  </script>
+</body>
+</html>
