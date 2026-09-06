@@ -141,7 +141,7 @@
       background: rgba(0,0,0,0.4); padding: 8px 16px; border-radius: 20px; font-size: 0.95rem;
     }
 
-    /* ===== CHAT GLOBAL ===== */
+    /* Chat */
     #chatContainer {
       position: fixed;
       bottom: 20px;
@@ -213,10 +213,77 @@
       font-weight: bold;
       cursor: pointer;
     }
-    #chatEnviar:hover { filter: brightness(1.1); }
     .chat-minimizado #chatMensagens,
     .chat-minimizado #chatInputArea {
       display: none;
+    }
+
+    /* ===== ADMIN ===== */
+    #adminBtn {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.2);
+      color: white;
+      font-size: 1.1rem;
+      cursor: pointer;
+      z-index: 90;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    #adminBtn:hover {
+      background: rgba(255,255,255,0.2);
+    }
+
+    #adminPanel {
+      position: fixed;
+      bottom: 70px;
+      left: 20px;
+      background: #1a1a2e;
+      border: 1px solid #ff6b6b;
+      border-radius: 14px;
+      padding: 16px;
+      width: 260px;
+      z-index: 100;
+      display: none;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+    #adminPanel h3 {
+      color: #ff6b6b;
+      margin-bottom: 12px;
+      font-size: 1rem;
+    }
+    #adminPanel input {
+      width: 100%;
+      padding: 10px;
+      border-radius: 8px;
+      border: none;
+      margin-bottom: 10px;
+      font-size: 0.95rem;
+    }
+    #adminPanel button {
+      width: 100%;
+      padding: 10px;
+      border: none;
+      border-radius: 8px;
+      background: #ff6b6b;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      margin-bottom: 8px;
+    }
+    #adminPanel button:hover {
+      filter: brightness(1.1);
+    }
+    .admin-logado {
+      color: #00ffcc;
+      font-size: 0.85rem;
+      margin-bottom: 10px;
     }
   </style>
 </head>
@@ -272,7 +339,7 @@
 
   <div class="info">
     A cada 10 pontos o visual muda.<br>
-    Ranking + Chat Global conectados.
+    Ranking + Chat Global + Admin
   </div>
 
   <!-- CHAT GLOBAL -->
@@ -288,10 +355,27 @@
     </div>
   </div>
 
+  <!-- BOTÃO ADMIN -->
+  <button id="adminBtn" title="Admin">⚙️</button>
+
+  <!-- PAINEL ADMIN -->
+  <div id="adminPanel">
+    <h3>Painel Admin</h3>
+    <div id="adminLogin">
+      <input type="password" id="adminSenha" placeholder="Senha de admin">
+      <button id="adminEntrar">Entrar</button>
+    </div>
+    <div id="adminControles" style="display:none;">
+      <div class="admin-logado">✅ Você é Admin</div>
+      <button id="btnLimparChat">🗑️ Limpar Chat</button>
+      <button id="btnFecharAdmin">Fechar</button>
+    </div>
+  </div>
+
   <!-- Firebase -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
-    import { getDatabase, ref, set, get, child, push, onChildAdded, query, limitToLast } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-database.js";
+    import { getDatabase, ref, set, get, child, push, onChildAdded, query, limitToLast, remove } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-database.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDwgOBBq_kYWP9ur3prOve6mOhLPfO1lLQ",
@@ -311,6 +395,7 @@
     let score = 0;
     let recorde = Number(localStorage.getItem('recordeBotao')) || 0;
     let apelido = localStorage.getItem('apelidoBotao') || '';
+    let isAdmin = false;
 
     let pontosPorClique = Number(localStorage.getItem('upPontos')) || 1;
     let reducaoReset = Number(localStorage.getItem('upSorte')) || 0;
@@ -319,6 +404,23 @@
     let custoPontos = Number(localStorage.getItem('custoPontos')) || 50;
     let custoSorte = Number(localStorage.getItem('custoSorte')) || 80;
     let custoCritico = Number(localStorage.getItem('custoCritico')) || 120;
+
+    // Lista de palavras proibidas (filtro)
+    const palavrasProibidas = [
+      'porra', 'caralho', 'puta', 'puto', 'fdp', 'filho da puta', 'vsf', 'vai se foder',
+      'merda', 'bosta', 'cu', 'buceta', 'piroca', 'pau no cu', 'arrombado', 'viado',
+      'bicha', 'vagabunda', 'vadia', 'piranha', 'foda-se', 'foda se', 'cuzao', 'cuzão',
+      'shit', 'fuck', 'bitch', 'asshole', 'dick', 'pussy', 'bastard'
+    ];
+
+    function filtrarPalavra(texto) {
+      let filtrado = texto;
+      palavrasProibidas.forEach(palavra => {
+        const regex = new RegExp(palavra, 'gi');
+        filtrado = filtrado.replace(regex, '***');
+      });
+      return filtrado;
+    }
 
     // Elementos
     const scoreEl = document.getElementById('score');
@@ -359,7 +461,48 @@
       iniciarChat();
     });
 
-    // ========== RANKING MUNDIAL ==========
+    // ========== ADMIN ==========
+    const adminBtn = document.getElementById('adminBtn');
+    const adminPanel = document.getElementById('adminPanel');
+    const adminSenha = document.getElementById('adminSenha');
+    const adminEntrar = document.getElementById('adminEntrar');
+    const adminLogin = document.getElementById('adminLogin');
+    const adminControles = document.getElementById('adminControles');
+
+    adminBtn.addEventListener('click', () => {
+      adminPanel.style.display = adminPanel.style.display === 'block' ? 'none' : 'block';
+    });
+
+    adminEntrar.addEventListener('click', () => {
+      if (adminSenha.value === 'qu33nb337') {
+        isAdmin = true;
+        adminLogin.style.display = 'none';
+        adminControles.style.display = 'block';
+        adminSenha.value = '';
+      } else {
+        alert('Senha incorreta!');
+        adminSenha.value = '';
+      }
+    });
+
+    document.getElementById('btnFecharAdmin').addEventListener('click', () => {
+      adminPanel.style.display = 'none';
+    });
+
+    document.getElementById('btnLimparChat').addEventListener('click', async () => {
+      if (!isAdmin) return;
+      if (confirm('Tem certeza que deseja limpar TODO o chat?')) {
+        try {
+          await remove(ref(db, 'chat'));
+          document.getElementById('chatMensagens').innerHTML = '';
+          alert('Chat limpo com sucesso!');
+        } catch (e) {
+          alert('Erro ao limpar chat');
+        }
+      }
+    });
+
+    // ========== RANKING ==========
     async function salvarNoRankingMundial() {
       if (!apelido || recorde <= 0) return;
       try {
@@ -367,15 +510,12 @@
           pontos: recorde,
           data: Date.now()
         });
-      } catch (e) {
-        console.log('Erro ao salvar ranking:', e);
-      }
+      } catch (e) {}
     }
 
     async function carregarRankingMundial() {
       const lista = document.getElementById('listaRanking');
       lista.innerHTML = '<li class="carregando">Carregando ranking...</li>';
-
       try {
         const snapshot = await get(child(ref(db), 'ranking'));
         if (snapshot.exists()) {
@@ -384,10 +524,8 @@
             nome: nome,
             pontos: dados[nome].pontos || 0
           }));
-
           ranking.sort((a, b) => b.pontos - a.pontos);
           ranking = ranking.slice(0, 10);
-
           lista.innerHTML = '';
           ranking.forEach((p, i) => {
             const li = document.createElement('li');
@@ -402,7 +540,7 @@
           lista.innerHTML = '<li style="justify-content:center">Nenhum recorde ainda</li>';
         }
       } catch (e) {
-        lista.innerHTML = '<li style="justify-content:center;color:#ff6b6b">Erro ao carregar ranking</li>';
+        lista.innerHTML = '<li style="justify-content:center;color:#ff6b6b">Erro ao carregar</li>';
       }
     }
 
@@ -410,12 +548,11 @@
       telaRanking.style.display = 'flex';
       carregarRankingMundial();
     });
-
     document.getElementById('fecharRanking').addEventListener('click', () => {
       telaRanking.style.display = 'none';
     });
 
-    // ========== CHAT GLOBAL ==========
+    // ========== CHAT ==========
     function iniciarChat() {
       const chatMensagens = document.getElementById('chatMensagens');
       const chatInput = document.getElementById('chatInput');
@@ -423,17 +560,18 @@
       const chatHeader = document.getElementById('chatHeader');
       const chatContainer = document.getElementById('chatContainer');
 
-      // Minimizar / maximizar
       chatHeader.addEventListener('click', () => {
         chatContainer.classList.toggle('chat-minimizado');
         document.getElementById('chatToggle').textContent = 
           chatContainer.classList.contains('chat-minimizado') ? '+' : '−';
       });
 
-      // Enviar mensagem
       function enviarMensagem() {
-        const texto = chatInput.value.trim();
+        let texto = chatInput.value.trim();
         if (!texto || !apelido) return;
+
+        // Filtro de palavras
+        texto = filtrarPalavra(texto);
 
         push(ref(db, 'chat'), {
           nome: apelido,
@@ -449,12 +587,10 @@
         if (e.key === 'Enter') enviarMensagem();
       });
 
-      // Escutar mensagens em tempo real (últimas 40)
       const chatQuery = query(ref(db, 'chat'), limitToLast(40));
       onChildAdded(chatQuery, (snapshot) => {
         const msg = snapshot.val();
         if (!msg) return;
-
         const div = document.createElement('div');
         div.className = 'msg';
         div.innerHTML = `<div class="nome">${msg.nome}</div>${msg.texto}`;
@@ -463,7 +599,7 @@
       });
     }
 
-    // ========== SOM ==========
+    // ========== SOM + JOGO ==========
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     function tocarSom(tipo) {
       if (audioCtx.state === 'suspended') audioCtx.resume();
@@ -569,7 +705,6 @@
       }
     }
 
-    // ========== CLIQUE ==========
     btn.addEventListener('click', (e) => {
       const rect = btn.getBoundingClientRect();
       const ripple = document.createElement('span');
@@ -634,7 +769,6 @@
       atualizarBotoesUpgrade();
     });
 
-    // ========== UPGRADES ==========
     function atualizarBotoesUpgrade() {
       document.getElementById('upPontos').disabled = score < custoPontos;
       document.getElementById('upSorte').disabled = score < custoSorte || reducaoReset >= 0.6;
