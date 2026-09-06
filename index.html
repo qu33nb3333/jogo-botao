@@ -139,7 +139,6 @@
       background: rgba(0,0,0,0.4); padding: 8px 16px; border-radius: 20px; font-size: 0.95rem;
     }
 
-    /* Chat */
     #chatContainer {
       position: fixed;
       bottom: 20px;
@@ -216,7 +215,6 @@
       display: none;
     }
 
-    /* Botões inferiores */
     #adminBtn, #configBtn {
       position: fixed;
       bottom: 20px;
@@ -237,7 +235,6 @@
     #configBtn { left: 70px; }
     #adminBtn:hover, #configBtn:hover { background: rgba(255,255,255,0.2); }
 
-    /* Painel Admin */
     #adminPanel {
       position: fixed;
       bottom: 70px;
@@ -247,7 +244,7 @@
       border-radius: 14px;
       padding: 16px;
       width: 300px;
-      max-height: 70vh;
+      max-height: 75vh;
       overflow-y: auto;
       z-index: 100;
       display: none;
@@ -311,7 +308,6 @@
     .btn-salvar { background: #00b894 !important; }
     .btn-apagar { background: #e17055 !important; }
 
-    /* Painel Configurações */
     #configPanel {
       position: fixed;
       bottom: 70px;
@@ -392,7 +388,7 @@
 
   <div class="info">
     A cada 10 pontos o visual muda.<br>
-    Use as Configurações para ajustar gráficos e música.
+    Use as Configurações para gráficos e música.
   </div>
 
   <!-- CHAT -->
@@ -421,15 +417,20 @@
     </div>
     <div id="adminControles" style="display:none;">
       <div class="admin-logado">✅ Você é Admin</div>
+      
       <button id="btnLimparChat">🗑️ Limpar Chat</button>
-      <button id="btnResetRanking" style="background:#d63031;">⚠️ Resetar Ranking Completo</button>
-      <h3 style="margin-top:15px; font-size:0.95rem;">Editar Ranking</h3>
+      <button id="btnResetRanking" style="background:#d63031;">⚠️ Resetar Ranking Mundial</button>
+      <button id="btnResetRecordePessoal" style="background:#e17055;">↺ Resetar Meu Recorde Pessoal</button>
+      <button id="btnToggle2x" style="background:#0984e3;">⚡ Ativar 2x Clique (Global)</button>
+      
+      <h3 style="margin-top:15px; font-size:0.95rem;">Editar Ranking Mundial</h3>
       <div id="adminRankingLista">Carregando...</div>
+      
       <button id="btnFecharAdmin" style="margin-top:10px; background:#636e72;">Fechar</button>
     </div>
   </div>
 
-  <!-- PAINEL CONFIGURAÇÕES -->
+  <!-- PAINEL CONFIG -->
   <div id="configPanel">
     <h3>⚙️ Configurações</h3>
     
@@ -457,7 +458,7 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
-    import { getDatabase, ref, set, get, child, push, onChildAdded, query, limitToLast, remove } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-database.js";
+    import { getDatabase, ref, set, get, child, push, onChildAdded, query, limitToLast, remove, onValue } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-database.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDwgOBBq_kYWP9ur3prOve6mOhLPfO1lLQ",
@@ -484,41 +485,28 @@
       'ultra-high': { particulas: 40, shake: true,  animScore: true,  flash: true }
     };
 
-    // ========== MÚSICA LO-FI ==========
-    // Playlist de lo-fi (YouTube embed silencioso + controle)
-    const playlist = [
-      "jfKfPfyJRdk", // Lofi Girl
-      "5qap5aO4i9A", // Lofi Hip Hop
-      "DWcJFNfaw9c", // Chill beats
-      "7NOSDKb0HlU", // Another lofi
-      "lTRiuFIWV54"  // More lofi
-    ];
+    // ========== MÚSICA ==========
+    const playlist = ["jfKfPfyJRdk", "5qap5aO4i9A", "DWcJFNfaw9c", "7NOSDKb0HlU", "lTRiuFIWV54"];
     let musicaAtual = 0;
     let musicaTocando = false;
     let ytPlayer = null;
 
-    // Carrega a API do YouTube
     const tag = document.createElement('script');
     tag.src = "https://www.youtube.com/iframe_api";
     document.head.appendChild(tag);
 
     window.onYouTubeIframeAPIReady = function() {
       ytPlayer = new YT.Player('ytPlayer', {
-        height: '0',
-        width: '0',
-        videoId: playlist[0],
+        height: '0', width: '0', videoId: playlist[0],
         playerVars: { autoplay: 0, controls: 0 },
         events: {
           onStateChange: (e) => {
-            if (e.data === YT.PlayerState.ENDED) {
-              proximaMusica();
-            }
+            if (e.data === YT.PlayerState.ENDED) proximaMusica();
           }
         }
       });
     };
 
-    // Elemento escondido para o player
     const ytDiv = document.createElement('div');
     ytDiv.id = 'ytPlayer';
     ytDiv.style.display = 'none';
@@ -543,11 +531,12 @@
       ytPlayer.playVideo();
     }
 
-    // ========== ESTADO DO JOGO ==========
+    // ========== ESTADO ==========
     let score = 0;
     let recorde = Number(localStorage.getItem('recordeBotao')) || 0;
     let apelido = localStorage.getItem('apelidoBotao') || '';
     let isAdmin = false;
+    let boost2xAtivo = false;
 
     let pontosPorClique = Number(localStorage.getItem('upPontos')) || 1;
     let reducaoReset = Number(localStorage.getItem('upSorte')) || 0;
@@ -611,7 +600,26 @@
       iniciarChat();
     });
 
-    // ========== CONFIGURAÇÕES ==========
+    // ========== BOOST 2X ==========
+    function atualizarBotao2x() {
+      const btn = document.getElementById('btnToggle2x');
+      if (!btn) return;
+      if (boost2xAtivo) {
+        btn.textContent = '⚡ 2x Clique ATIVADO (desativar)';
+        btn.style.background = '#00b894';
+      } else {
+        btn.textContent = '⚡ Ativar 2x Clique (Global)';
+        btn.style.background = '#0984e3';
+      }
+    }
+
+    // Escuta em tempo real o boost
+    onValue(ref(db, 'config/boost2x'), (snapshot) => {
+      boost2xAtivo = snapshot.exists() ? snapshot.val() : false;
+      atualizarBotao2x();
+    });
+
+    // ========== CONFIG ==========
     const configBtn = document.getElementById('configBtn');
     const configPanel = document.getElementById('configPanel');
     const selectGraficos = document.getElementById('selectGraficos');
@@ -635,7 +643,6 @@
     });
 
     btnMusica.addEventListener('click', tocarMusica);
-
     volumeMusica.addEventListener('input', () => {
       if (ytPlayer && ytPlayer.setVolume) {
         ytPlayer.setVolume(volumeMusica.value * 100);
@@ -663,6 +670,7 @@
         adminControles.style.display = 'block';
         adminSenha.value = '';
         carregarAdminRanking();
+        atualizarBotao2x();
       } else {
         alert('Senha incorreta!');
         adminSenha.value = '';
@@ -684,11 +692,29 @@
 
     document.getElementById('btnResetRanking').addEventListener('click', async () => {
       if (!isAdmin) return;
-      if (confirm('⚠️ Tem certeza que deseja APAGAR TODO O RANKING?')) {
+      if (confirm('⚠️ Tem certeza que deseja APAGAR TODO O RANKING MUNDIAL?')) {
         await remove(ref(db, 'ranking'));
-        alert('Ranking resetado!');
+        alert('Ranking Mundial resetado!');
         carregarAdminRanking();
       }
+    });
+
+    document.getElementById('btnResetRecordePessoal').addEventListener('click', () => {
+      if (!isAdmin) return;
+      if (confirm('Resetar o SEU recorde pessoal para 0?')) {
+        recorde = 0;
+        localStorage.setItem('recordeBotao', 0);
+        recordeEl.textContent = 0;
+        alert('Seu recorde pessoal foi resetado!');
+      }
+    });
+
+    document.getElementById('btnToggle2x').addEventListener('click', async () => {
+      if (!isAdmin) return;
+      boost2xAtivo = !boost2xAtivo;
+      await set(ref(db, 'config/boost2x'), boost2xAtivo);
+      atualizarBotao2x();
+      alert(boost2xAtivo ? '⚡ 2x Clique ATIVADO para todos!' : '2x Clique DESATIVADO');
     });
 
     async function carregarAdminRanking() {
@@ -825,7 +851,7 @@
       });
     }
 
-    // ========== JOGO + VFX ==========
+    // ========== JOGO ==========
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     function tocarSom(tipo) {
       if (audioCtx.state === 'suspended') audioCtx.resume();
@@ -969,7 +995,8 @@
         criarParticulas(window.innerWidth/2, window.innerHeight/2, '#ff3355', 28);
         atualizarTema();
       } else {
-        let ganho = pontosPorClique;
+        // Aplica o 2x se estiver ativo
+        let ganho = pontosPorClique * (boost2xAtivo ? 2 : 1);
         let foiCritico = false;
         if (Math.random() < chanceCritico) {
           ganho *= 2;
