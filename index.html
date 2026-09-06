@@ -85,7 +85,6 @@
     body.tema-7 { background: linear-gradient(135deg, #1f1c2c, #928dab, #3a2f4d); }
     body.tema-8 { background: linear-gradient(135deg, #000000, #434343, #1a1a1a); }
 
-    /* Login */
     #telaLogin {
       position: fixed; inset: 0; background: rgba(0,0,0,0.85);
       display: flex; align-items: center; justify-content: center; z-index: 200;
@@ -105,7 +104,6 @@
       color: #0f0c29; font-size: 1.1rem; font-weight: bold; cursor: pointer;
     }
 
-    /* Ranking */
     #rankingBtn {
       position: fixed; top: 20px; right: 20px;
       background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.2);
@@ -218,11 +216,10 @@
       display: none;
     }
 
-    /* ===== ADMIN ===== */
-    #adminBtn {
+    /* Botões inferiores */
+    #adminBtn, #configBtn {
       position: fixed;
       bottom: 20px;
-      left: 20px;
       width: 42px;
       height: 42px;
       border-radius: 50%;
@@ -236,10 +233,11 @@
       align-items: center;
       justify-content: center;
     }
-    #adminBtn:hover {
-      background: rgba(255,255,255,0.2);
-    }
+    #adminBtn { left: 20px; }
+    #configBtn { left: 70px; }
+    #adminBtn:hover, #configBtn:hover { background: rgba(255,255,255,0.2); }
 
+    /* Painel Admin */
     #adminPanel {
       position: fixed;
       bottom: 70px;
@@ -248,17 +246,21 @@
       border: 1px solid #ff6b6b;
       border-radius: 14px;
       padding: 16px;
-      width: 260px;
+      width: 300px;
+      max-height: 70vh;
+      overflow-y: auto;
       z-index: 100;
       display: none;
       box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      text-align: left;
     }
     #adminPanel h3 {
       color: #ff6b6b;
       margin-bottom: 12px;
       font-size: 1rem;
+      text-align: center;
     }
-    #adminPanel input {
+    #adminPanel input, #configPanel select, #configPanel input[type=range] {
       width: 100%;
       padding: 10px;
       border-radius: 8px;
@@ -266,7 +268,7 @@
       margin-bottom: 10px;
       font-size: 0.95rem;
     }
-    #adminPanel button {
+    #adminPanel button, #configPanel button {
       width: 100%;
       padding: 10px;
       border: none;
@@ -277,19 +279,71 @@
       cursor: pointer;
       margin-bottom: 8px;
     }
-    #adminPanel button:hover {
-      filter: brightness(1.1);
-    }
+    #adminPanel button:hover, #configPanel button:hover { filter: brightness(1.1); }
     .admin-logado {
       color: #00ffcc;
       font-size: 0.85rem;
       margin-bottom: 10px;
+      text-align: center;
+    }
+    .admin-rank-item {
+      background: rgba(255,255,255,0.05);
+      padding: 8px 10px;
+      border-radius: 8px;
+      margin-bottom: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.85rem;
+    }
+    .admin-rank-item input {
+      width: 70px;
+      padding: 4px;
+      margin: 0 6px;
+      font-size: 0.85rem;
+    }
+    .admin-rank-item button {
+      width: auto;
+      padding: 4px 8px;
+      font-size: 0.75rem;
+      margin: 0;
+    }
+    .btn-salvar { background: #00b894 !important; }
+    .btn-apagar { background: #e17055 !important; }
+
+    /* Painel Configurações */
+    #configPanel {
+      position: fixed;
+      bottom: 70px;
+      left: 70px;
+      background: #1a1a2e;
+      border: 1px solid #00ffcc;
+      border-radius: 14px;
+      padding: 18px;
+      width: 280px;
+      z-index: 100;
+      display: none;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      text-align: left;
+    }
+    #configPanel h3 {
+      color: #00ffcc;
+      margin-bottom: 14px;
+      text-align: center;
+    }
+    #configPanel label {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 0.9rem;
+      opacity: 0.9;
+    }
+    .config-section {
+      margin-bottom: 16px;
     }
   </style>
 </head>
 <body class="tema-1">
 
-  <!-- LOGIN -->
   <div id="telaLogin">
     <div class="login-box">
       <h2>Entrar no Jogo</h2>
@@ -298,7 +352,6 @@
     </div>
   </div>
 
-  <!-- RANKING -->
   <div id="telaRanking">
     <div class="ranking-box">
       <h2>🏆 Ranking Mundial</h2>
@@ -339,10 +392,10 @@
 
   <div class="info">
     A cada 10 pontos o visual muda.<br>
-    Ranking + Chat Global + Admin
+    Use as Configurações para ajustar gráficos e música.
   </div>
 
-  <!-- CHAT GLOBAL -->
+  <!-- CHAT -->
   <div id="chatContainer">
     <div id="chatHeader">
       <span>💬 Chat Global</span>
@@ -355,8 +408,9 @@
     </div>
   </div>
 
-  <!-- BOTÃO ADMIN -->
+  <!-- BOTÕES -->
   <button id="adminBtn" title="Admin">⚙️</button>
+  <button id="configBtn" title="Configurações">🎚️</button>
 
   <!-- PAINEL ADMIN -->
   <div id="adminPanel">
@@ -368,11 +422,39 @@
     <div id="adminControles" style="display:none;">
       <div class="admin-logado">✅ Você é Admin</div>
       <button id="btnLimparChat">🗑️ Limpar Chat</button>
-      <button id="btnFecharAdmin">Fechar</button>
+      <button id="btnResetRanking" style="background:#d63031;">⚠️ Resetar Ranking Completo</button>
+      <h3 style="margin-top:15px; font-size:0.95rem;">Editar Ranking</h3>
+      <div id="adminRankingLista">Carregando...</div>
+      <button id="btnFecharAdmin" style="margin-top:10px; background:#636e72;">Fechar</button>
     </div>
   </div>
 
-  <!-- Firebase -->
+  <!-- PAINEL CONFIGURAÇÕES -->
+  <div id="configPanel">
+    <h3>⚙️ Configurações</h3>
+    
+    <div class="config-section">
+      <label>Qualidade Gráfica</label>
+      <select id="selectGraficos">
+        <option value="ultra-low">Ultra Low (celular fraco)</option>
+        <option value="low">Low</option>
+        <option value="ultra-medium">Ultra Medium</option>
+        <option value="medium" selected>Medium</option>
+        <option value="high">High</option>
+        <option value="ultra-high">Ultra High (celular forte)</option>
+      </select>
+    </div>
+
+    <div class="config-section">
+      <label>Música Lo-fi</label>
+      <button id="btnMusica">▶️ Tocar Música</button>
+      <label style="margin-top:8px;">Volume</label>
+      <input type="range" id="volumeMusica" min="0" max="1" step="0.05" value="0.4">
+    </div>
+
+    <button id="btnFecharConfig" style="background:#636e72;">Fechar</button>
+  </div>
+
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
     import { getDatabase, ref, set, get, child, push, onChildAdded, query, limitToLast, remove } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-database.js";
@@ -391,7 +473,77 @@
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
-    // ========== ESTADO ==========
+    // ========== CONFIGURAÇÕES DE GRÁFICOS ==========
+    let qualidade = localStorage.getItem('qualidadeGrafica') || 'medium';
+    const configGraficos = {
+      'ultra-low':  { particulas: 0,  shake: false, animScore: false, flash: false },
+      'low':        { particulas: 6,  shake: false, animScore: true,  flash: false },
+      'ultra-medium':{ particulas: 12, shake: true,  animScore: true,  flash: true },
+      'medium':     { particulas: 18, shake: true,  animScore: true,  flash: true },
+      'high':       { particulas: 28, shake: true,  animScore: true,  flash: true },
+      'ultra-high': { particulas: 40, shake: true,  animScore: true,  flash: true }
+    };
+
+    // ========== MÚSICA LO-FI ==========
+    // Playlist de lo-fi (YouTube embed silencioso + controle)
+    const playlist = [
+      "jfKfPfyJRdk", // Lofi Girl
+      "5qap5aO4i9A", // Lofi Hip Hop
+      "DWcJFNfaw9c", // Chill beats
+      "7NOSDKb0HlU", // Another lofi
+      "lTRiuFIWV54"  // More lofi
+    ];
+    let musicaAtual = 0;
+    let musicaTocando = false;
+    let ytPlayer = null;
+
+    // Carrega a API do YouTube
+    const tag = document.createElement('script');
+    tag.src = "https://www.youtube.com/iframe_api";
+    document.head.appendChild(tag);
+
+    window.onYouTubeIframeAPIReady = function() {
+      ytPlayer = new YT.Player('ytPlayer', {
+        height: '0',
+        width: '0',
+        videoId: playlist[0],
+        playerVars: { autoplay: 0, controls: 0 },
+        events: {
+          onStateChange: (e) => {
+            if (e.data === YT.PlayerState.ENDED) {
+              proximaMusica();
+            }
+          }
+        }
+      });
+    };
+
+    // Elemento escondido para o player
+    const ytDiv = document.createElement('div');
+    ytDiv.id = 'ytPlayer';
+    ytDiv.style.display = 'none';
+    document.body.appendChild(ytDiv);
+
+    function tocarMusica() {
+      if (!ytPlayer) return;
+      if (musicaTocando) {
+        ytPlayer.pauseVideo();
+        document.getElementById('btnMusica').textContent = '▶️ Tocar Música';
+        musicaTocando = false;
+      } else {
+        ytPlayer.playVideo();
+        document.getElementById('btnMusica').textContent = '⏸️ Pausar Música';
+        musicaTocando = true;
+      }
+    }
+
+    function proximaMusica() {
+      musicaAtual = (musicaAtual + 1) % playlist.length;
+      ytPlayer.loadVideoById(playlist[musicaAtual]);
+      ytPlayer.playVideo();
+    }
+
+    // ========== ESTADO DO JOGO ==========
     let score = 0;
     let recorde = Number(localStorage.getItem('recordeBotao')) || 0;
     let apelido = localStorage.getItem('apelidoBotao') || '';
@@ -405,7 +557,6 @@
     let custoSorte = Number(localStorage.getItem('custoSorte')) || 80;
     let custoCritico = Number(localStorage.getItem('custoCritico')) || 120;
 
-    // Lista de palavras proibidas (filtro)
     const palavrasProibidas = [
       'porra', 'caralho', 'puta', 'puto', 'fdp', 'filho da puta', 'vsf', 'vai se foder',
       'merda', 'bosta', 'cu', 'buceta', 'piroca', 'pau no cu', 'arrombado', 'viado',
@@ -422,7 +573,6 @@
       return filtrado;
     }
 
-    // Elementos
     const scoreEl = document.getElementById('score');
     const recordeEl = document.getElementById('recorde');
     const chanceEl = document.getElementById('chance');
@@ -437,7 +587,7 @@
     const jogadorInfo = document.getElementById('jogadorInfo');
     const rankingBtn = document.getElementById('rankingBtn');
 
-    // ========== LOGIN ==========
+    // LOGIN
     if (apelido) {
       telaLogin.style.display = 'none';
       rankingBtn.style.display = 'block';
@@ -461,6 +611,37 @@
       iniciarChat();
     });
 
+    // ========== CONFIGURAÇÕES ==========
+    const configBtn = document.getElementById('configBtn');
+    const configPanel = document.getElementById('configPanel');
+    const selectGraficos = document.getElementById('selectGraficos');
+    const btnMusica = document.getElementById('btnMusica');
+    const volumeMusica = document.getElementById('volumeMusica');
+
+    selectGraficos.value = qualidade;
+
+    configBtn.addEventListener('click', () => {
+      configPanel.style.display = configPanel.style.display === 'block' ? 'none' : 'block';
+      document.getElementById('adminPanel').style.display = 'none';
+    });
+
+    document.getElementById('btnFecharConfig').addEventListener('click', () => {
+      configPanel.style.display = 'none';
+    });
+
+    selectGraficos.addEventListener('change', () => {
+      qualidade = selectGraficos.value;
+      localStorage.setItem('qualidadeGrafica', qualidade);
+    });
+
+    btnMusica.addEventListener('click', tocarMusica);
+
+    volumeMusica.addEventListener('input', () => {
+      if (ytPlayer && ytPlayer.setVolume) {
+        ytPlayer.setVolume(volumeMusica.value * 100);
+      }
+    });
+
     // ========== ADMIN ==========
     const adminBtn = document.getElementById('adminBtn');
     const adminPanel = document.getElementById('adminPanel');
@@ -471,6 +652,8 @@
 
     adminBtn.addEventListener('click', () => {
       adminPanel.style.display = adminPanel.style.display === 'block' ? 'none' : 'block';
+      configPanel.style.display = 'none';
+      if (isAdmin) carregarAdminRanking();
     });
 
     adminEntrar.addEventListener('click', () => {
@@ -479,6 +662,7 @@
         adminLogin.style.display = 'none';
         adminControles.style.display = 'block';
         adminSenha.value = '';
+        carregarAdminRanking();
       } else {
         alert('Senha incorreta!');
         adminSenha.value = '';
@@ -491,25 +675,75 @@
 
     document.getElementById('btnLimparChat').addEventListener('click', async () => {
       if (!isAdmin) return;
-      if (confirm('Tem certeza que deseja limpar TODO o chat?')) {
-        try {
-          await remove(ref(db, 'chat'));
-          document.getElementById('chatMensagens').innerHTML = '';
-          alert('Chat limpo com sucesso!');
-        } catch (e) {
-          alert('Erro ao limpar chat');
-        }
+      if (confirm('Limpar TODO o chat?')) {
+        await remove(ref(db, 'chat'));
+        document.getElementById('chatMensagens').innerHTML = '';
+        alert('Chat limpo!');
       }
     });
+
+    document.getElementById('btnResetRanking').addEventListener('click', async () => {
+      if (!isAdmin) return;
+      if (confirm('⚠️ Tem certeza que deseja APAGAR TODO O RANKING?')) {
+        await remove(ref(db, 'ranking'));
+        alert('Ranking resetado!');
+        carregarAdminRanking();
+      }
+    });
+
+    async function carregarAdminRanking() {
+      const container = document.getElementById('adminRankingLista');
+      container.innerHTML = 'Carregando...';
+      try {
+        const snapshot = await get(child(ref(db), 'ranking'));
+        if (!snapshot.exists()) {
+          container.innerHTML = '<div style="text-align:center;opacity:0.6">Ranking vazio</div>';
+          return;
+        }
+        const dados = snapshot.val();
+        let ranking = Object.keys(dados).map(nome => ({
+          nome,
+          pontos: dados[nome].pontos || 0
+        }));
+        ranking.sort((a, b) => b.pontos - a.pontos);
+        container.innerHTML = '';
+        ranking.forEach(p => {
+          const div = document.createElement('div');
+          div.className = 'admin-rank-item';
+          div.innerHTML = `
+            <span style="flex:1">${p.nome}</span>
+            <input type="number" value="${p.pontos}" id="edit-${p.nome}">
+            <button class="btn-salvar" onclick="salvarPontos('${p.nome}')">💾</button>
+            <button class="btn-apagar" onclick="apagarJogador('${p.nome}')">🗑️</button>
+          `;
+          container.appendChild(div);
+        });
+      } catch (e) {
+        container.innerHTML = 'Erro ao carregar';
+      }
+    }
+
+    window.salvarPontos = async function(nome) {
+      const input = document.getElementById('edit-' + nome);
+      const novosPontos = Number(input.value);
+      if (isNaN(novosPontos) || novosPontos < 0) return alert('Pontuação inválida');
+      await set(ref(db, 'ranking/' + nome), { pontos: novosPontos, data: Date.now() });
+      alert(`Pontuação de ${nome} atualizada`);
+      carregarAdminRanking();
+    };
+
+    window.apagarJogador = async function(nome) {
+      if (confirm(`Apagar ${nome} do ranking?`)) {
+        await remove(ref(db, 'ranking/' + nome));
+        carregarAdminRanking();
+      }
+    };
 
     // ========== RANKING ==========
     async function salvarNoRankingMundial() {
       if (!apelido || recorde <= 0) return;
       try {
-        await set(ref(db, 'ranking/' + apelido), {
-          pontos: recorde,
-          data: Date.now()
-        });
+        await set(ref(db, 'ranking/' + apelido), { pontos: recorde, data: Date.now() });
       } catch (e) {}
     }
 
@@ -569,16 +803,8 @@
       function enviarMensagem() {
         let texto = chatInput.value.trim();
         if (!texto || !apelido) return;
-
-        // Filtro de palavras
         texto = filtrarPalavra(texto);
-
-        push(ref(db, 'chat'), {
-          nome: apelido,
-          texto: texto,
-          data: Date.now()
-        });
-
+        push(ref(db, 'chat'), { nome: apelido, texto: texto, data: Date.now() });
         chatInput.value = '';
       }
 
@@ -599,7 +825,7 @@
       });
     }
 
-    // ========== SOM + JOGO ==========
+    // ========== JOGO + VFX ==========
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     function tocarSom(tipo) {
       if (audioCtx.state === 'suspended') audioCtx.resume();
@@ -678,7 +904,11 @@
       btn.style.boxShadow = `0 10px 30px ${tema.cor}66`;
     }
 
-    function criarParticulas(x, y, cor, qtd = 18) {
+    function criarParticulas(x, y, cor, qtdBase = 18) {
+      const cfg = configGraficos[qualidade];
+      const qtd = Math.min(qtdBase, cfg.particulas);
+      if (qtd <= 0) return;
+
       for (let i = 0; i < qtd; i++) {
         const p = document.createElement('div');
         p.className = 'particle';
@@ -718,17 +948,22 @@
 
       const chance = getResetChance(score);
       const roll = Math.random() * 100;
+      const cfg = configGraficos[qualidade];
 
       if (roll < chance) {
         score = 0;
         tocarSom('reset');
-        flash.classList.add('show');
-        document.body.style.transform = 'translate(5px, -4px)';
-        setTimeout(() => document.body.style.transform = 'translate(-4px, 3px)', 50);
-        setTimeout(() => {
-          document.body.style.transform = 'translate(0,0)';
-          flash.classList.remove('show');
-        }, 160);
+
+        if (cfg.flash) {
+          flash.classList.add('show');
+          setTimeout(() => flash.classList.remove('show'), 160);
+        }
+        if (cfg.shake) {
+          document.body.style.transform = 'translate(5px, -4px)';
+          setTimeout(() => document.body.style.transform = 'translate(-4px, 3px)', 50);
+          setTimeout(() => document.body.style.transform = 'translate(0,0)', 160);
+        }
+
         resetMsg.classList.add('show');
         setTimeout(() => resetMsg.classList.remove('show'), 1400);
         criarParticulas(window.innerWidth/2, window.innerHeight/2, '#ff3355', 28);
@@ -742,8 +977,11 @@
         }
         score += ganho;
         tocarSom(foiCritico ? 'critico' : 'click');
-        scoreEl.classList.add('pop');
-        setTimeout(() => scoreEl.classList.remove('pop'), 160);
+
+        if (cfg.animScore) {
+          scoreEl.classList.add('pop');
+          setTimeout(() => scoreEl.classList.remove('pop'), 160);
+        }
 
         if (foiCritico) {
           criticoMsg.classList.add('show');
