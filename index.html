@@ -420,7 +420,7 @@
       
       <button id="btnLimparChat">🗑️ Limpar Chat</button>
       <button id="btnResetRanking" style="background:#d63031;">⚠️ Resetar Ranking Mundial</button>
-      <button id="btnResetRecordePessoal" style="background:#e17055;">↺ Resetar Meu Recorde Pessoal</button>
+      <button id="btnResetRecordeGlobal" style="background:#e17055;">↺ Resetar Recorde Pessoal de TODOS</button>
       <button id="btnToggle2x" style="background:#0984e3;">⚡ Ativar 2x Clique (Global)</button>
       
       <h3 style="margin-top:15px; font-size:0.95rem;">Editar Ranking Mundial</h3>
@@ -576,6 +576,24 @@
     const jogadorInfo = document.getElementById('jogadorInfo');
     const rankingBtn = document.getElementById('rankingBtn');
 
+    // ========== RESET GLOBAL DE RECORDE PESSOAL ==========
+    async function verificarResetPessoal() {
+      try {
+        const snapshot = await get(ref(db, 'config/forceResetPersonal'));
+        if (!snapshot.exists()) return;
+
+        const tempoReset = snapshot.val();
+        const ultimoResetLocal = Number(localStorage.getItem('ultimoResetPessoal')) || 0;
+
+        if (tempoReset > ultimoResetLocal) {
+          recorde = 0;
+          localStorage.setItem('recordeBotao', 0);
+          localStorage.setItem('ultimoResetPessoal', tempoReset);
+          recordeEl.textContent = 0;
+        }
+      } catch (e) {}
+    }
+
     // LOGIN
     if (apelido) {
       telaLogin.style.display = 'none';
@@ -583,6 +601,7 @@
       jogadorInfo.style.display = 'block';
       jogadorInfo.textContent = `👤 ${apelido}`;
       iniciarChat();
+      verificarResetPessoal();
     }
 
     document.getElementById('btnEntrar').addEventListener('click', () => {
@@ -598,6 +617,7 @@
       jogadorInfo.style.display = 'block';
       jogadorInfo.textContent = `👤 ${apelido}`;
       iniciarChat();
+      verificarResetPessoal();
     });
 
     // ========== BOOST 2X ==========
@@ -613,7 +633,6 @@
       }
     }
 
-    // Escuta em tempo real o boost
     onValue(ref(db, 'config/boost2x'), (snapshot) => {
       boost2xAtivo = snapshot.exists() ? snapshot.val() : false;
       atualizarBotao2x();
@@ -699,13 +718,12 @@
       }
     });
 
-    document.getElementById('btnResetRecordePessoal').addEventListener('click', () => {
+    // RESET GLOBAL DE RECORDE PESSOAL
+    document.getElementById('btnResetRecordeGlobal').addEventListener('click', async () => {
       if (!isAdmin) return;
-      if (confirm('Resetar o SEU recorde pessoal para 0?')) {
-        recorde = 0;
-        localStorage.setItem('recordeBotao', 0);
-        recordeEl.textContent = 0;
-        alert('Seu recorde pessoal foi resetado!');
+      if (confirm('⚠️ Isso vai ZERAR o recorde pessoal de TODOS os jogadores na próxima vez que eles abrirem o jogo.\n\nTem certeza?')) {
+        await set(ref(db, 'config/forceResetPersonal'), Date.now());
+        alert('Comando enviado! Todos terão o recorde pessoal resetado quando abrirem o jogo.');
       }
     });
 
@@ -995,7 +1013,6 @@
         criarParticulas(window.innerWidth/2, window.innerHeight/2, '#ff3355', 28);
         atualizarTema();
       } else {
-        // Aplica o 2x se estiver ativo
         let ganho = pontosPorClique * (boost2xAtivo ? 2 : 1);
         let foiCritico = false;
         if (Math.random() < chanceCritico) {
