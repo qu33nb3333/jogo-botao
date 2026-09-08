@@ -6,20 +6,117 @@
   <title>Jogo do Botão</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', system-ui, sans-serif; }
+    
     body {
       min-height: 100vh;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
       color: white;
       text-align: center;
       padding: 20px;
       overflow-x: hidden;
-      transition: background 0.8s ease;
       position: relative;
     }
+
+    /* ========== FUNDO ANIMADO LEVE ========== */
+    #fundo-animado {
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      overflow: hidden;
+      pointer-events: none;
+    }
+    .ceu {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to bottom, #1a1a4e 0%, #2d2b6b 40%, #3a2f7a 100%);
+    }
+    .lago {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 45%;
+      background: linear-gradient(to bottom, #1e3a5f 0%, #0f2744 100%);
+      opacity: 0.9;
+    }
+    .lago::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(to bottom, rgba(255,255,255,0.05), transparent 40%);
+    }
+    .ilha {
+      position: absolute;
+      bottom: 28%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 180px;
+      height: 60px;
+    }
+    .ilha::before {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 160px;
+      height: 35px;
+      background: #2d4a3e;
+      border-radius: 50% 50% 40% 40%;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+    }
+    .tronco {
+      position: absolute;
+      bottom: 25px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 12px;
+      height: 55px;
+      background: linear-gradient(to right, #4a3728, #6b4e31);
+      border-radius: 4px;
+    }
+    .copa {
+      position: absolute;
+      bottom: 60px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 90px;
+      height: 70px;
+      background: radial-gradient(circle at 30% 40%, #ffb7c5, #ff8fab 60%, #e85a7a);
+      border-radius: 50% 50% 45% 45%;
+      box-shadow: 
+        -25px 10px 0 -8px #ff9eb5,
+        28px 8px 0 -10px #ff8fab,
+        0 -15px 0 -5px #ffc2d4;
+    }
+    .petala {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      background: #ffb7c5;
+      border-radius: 50% 0 50% 50%;
+      opacity: 0.85;
+      pointer-events: none;
+      animation: cair linear infinite;
+    }
+    @keyframes cair {
+      0% {
+        transform: translateY(-20px) rotate(0deg);
+        opacity: 0;
+      }
+      10% { opacity: 0.9; }
+      100% {
+        transform: translateY(100vh) rotate(720deg);
+        opacity: 0;
+      }
+    }
+
     .flash {
       position: fixed; inset: 0; background: #ff0033; opacity: 0;
       pointer-events: none; z-index: 100; transition: opacity 0.15s;
@@ -82,14 +179,6 @@
       position: fixed; width: 8px; height: 8px; border-radius: 50%;
       pointer-events: none; z-index: 50;
     }
-    body.tema-1 { background: linear-gradient(135deg, #0f0c29, #302b63, #24243e); }
-    body.tema-2 { background: linear-gradient(135deg, #1a2a6c, #2a5298, #1e3c72); }
-    body.tema-3 { background: linear-gradient(135deg, #4a00e0, #8e2de2, #3a1c71); }
-    body.tema-4 { background: linear-gradient(135deg, #c31432, #240b36, #8e0e00); }
-    body.tema-5 { background: linear-gradient(135deg, #f12711, #f5af19, #c94b00); }
-    body.tema-6 { background: linear-gradient(135deg, #0f2027, #203a43, #2c5364); }
-    body.tema-7 { background: linear-gradient(135deg, #1f1c2c, #928dab, #3a2f4d); }
-    body.tema-8 { background: linear-gradient(135deg, #000000, #434343, #1a1a1a); }
 
     #telaLogin {
       position: fixed; inset: 0; background: rgba(0,0,0,0.85);
@@ -344,7 +433,18 @@
     }
   </style>
 </head>
-<body class="tema-1">
+<body>
+
+  <!-- FUNDO ANIMADO -->
+  <div id="fundo-animado">
+    <div class="ceu"></div>
+    <div class="lago"></div>
+    <div class="ilha">
+      <div class="tronco"></div>
+      <div class="copa"></div>
+    </div>
+    <div class="petalas" id="petalas"></div>
+  </div>
 
   <div id="telaLogin">
     <div class="login-box">
@@ -395,7 +495,7 @@
 
   <div class="info">
     A cada 10 pontos o visual muda.<br>
-    Anti Auto-Click ativado.
+    Fundo animado + Anti Auto-Click.
   </div>
 
   <!-- CHAT -->
@@ -481,6 +581,27 @@
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
+    // ========== PÉTALAS DA CEREJEIRA ==========
+    function criarPetalas() {
+      const container = document.getElementById('petalas');
+      if (!container) return;
+      const quantidade = 12;
+
+      for (let i = 0; i < quantidade; i++) {
+        const petala = document.createElement('div');
+        petala.className = 'petala';
+        petala.style.left = Math.random() * 100 + 'vw';
+        petala.style.animationDuration = (8 + Math.random() * 10) + 's';
+        petala.style.animationDelay = (Math.random() * 8) + 's';
+        petala.style.opacity = 0.6 + Math.random() * 0.3;
+        const tamanho = 7 + Math.random() * 6;
+        petala.style.width = tamanho + 'px';
+        petala.style.height = tamanho + 'px';
+        container.appendChild(petala);
+      }
+    }
+    criarPetalas();
+
     // ========== ANTI AUTO-CLICK ==========
     let lastClickTime = 0;
     let clickTimestamps = [];
@@ -494,10 +615,8 @@
       const agora = Date.now();
       clickTimestamps = clickTimestamps.filter(t => agora - t < JANELA_TEMPO);
       clickTimestamps.push(agora);
-
       if (agora - lastClickTime < MIN_INTERVALO) return true;
       if (clickTimestamps.length > MAX_CPS) return true;
-
       lastClickTime = agora;
       return false;
     }
@@ -506,10 +625,8 @@
       if (bloqueadoPorAutoClick) return;
       bloqueadoPorAutoClick = true;
       btn.disabled = true;
-
       const msg = document.getElementById('anticheatMsg');
       msg.classList.add('show');
-
       setTimeout(() => {
         bloqueadoPorAutoClick = false;
         btn.disabled = false;
@@ -529,7 +646,7 @@
       'ultra-high': { particulas: 40, shake: true,  animScore: true,  flash: true }
     };
 
-    // ========== MÚSICA (Playlist que você pediu) ==========
+    // ========== MÚSICA ==========
     const PLAYLIST_ID = "PLkPk39W2-NqxwAgJ6nau5odl4UckwXUn2";
     let musicaTocando = false;
     let ytPlayer = null;
@@ -559,7 +676,6 @@
 
     function tocarMusica() {
       if (!ytPlayer) return;
-
       if (musicaTocando) {
         ytPlayer.pauseVideo();
         document.getElementById('btnMusica').textContent = '▶️ Tocar Música';
@@ -616,15 +732,12 @@
     const jogadorInfo = document.getElementById('jogadorInfo');
     const rankingBtn = document.getElementById('rankingBtn');
 
-    // ========== RESET GLOBAL DE RECORDE PESSOAL ==========
     async function verificarResetPessoal() {
       try {
         const snapshot = await get(ref(db, 'config/forceResetPersonal'));
         if (!snapshot.exists()) return;
-
         const tempoReset = snapshot.val();
         const ultimoResetLocal = Number(localStorage.getItem('ultimoResetPessoal')) || 0;
-
         if (tempoReset > ultimoResetLocal) {
           recorde = 0;
           localStorage.setItem('recordeBotao', 0);
@@ -634,7 +747,6 @@
       } catch (e) {}
     }
 
-    // LOGIN
     if (apelido) {
       telaLogin.style.display = 'none';
       rankingBtn.style.display = 'block';
@@ -660,7 +772,6 @@
       verificarResetPessoal();
     });
 
-    // ========== BOOST 2X ==========
     function atualizarBotao2x() {
       const btn2x = document.getElementById('btnToggle2x');
       if (!btn2x) return;
@@ -678,7 +789,6 @@
       atualizarBotao2x();
     });
 
-    // ========== CONFIG ==========
     const configBtn = document.getElementById('configBtn');
     const configPanel = document.getElementById('configPanel');
     const selectGraficos = document.getElementById('selectGraficos');
@@ -708,7 +818,6 @@
       }
     });
 
-    // ========== ADMIN ==========
     const adminBtn = document.getElementById('adminBtn');
     const adminPanel = document.getElementById('adminPanel');
     const adminSenha = document.getElementById('adminSenha');
@@ -822,7 +931,6 @@
       }
     };
 
-    // ========== RANKING ==========
     async function salvarNoRankingMundial() {
       if (!apelido || recorde <= 0) return;
       try {
@@ -869,7 +977,6 @@
       telaRanking.style.display = 'none';
     });
 
-    // ========== CHAT ==========
     function iniciarChat() {
       const chatMensagens = document.getElementById('chatMensagens');
       const chatInput = document.getElementById('chatInput');
@@ -908,7 +1015,6 @@
       });
     }
 
-    // ========== JOGO ==========
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     function tocarSom(tipo) {
       if (audioCtx.state === 'suspended') audioCtx.resume();
@@ -968,23 +1074,14 @@
     }
 
     function atualizarTema() {
+      // Com o fundo animado, os temas de cor ainda mudam o botão e textos
       const nivel = Math.floor(score / 10);
-      const temas = [
-        { classe: 'tema-1', cor: '#00ffcc', botao: 'linear-gradient(145deg, #00ffcc, #00b894)' },
-        { classe: 'tema-2', cor: '#4fc3f7', botao: 'linear-gradient(145deg, #4fc3f7, #0288d1)' },
-        { classe: 'tema-3', cor: '#ce93d8', botao: 'linear-gradient(145deg, #ce93d8, #8e24aa)' },
-        { classe: 'tema-4', cor: '#ef5350', botao: 'linear-gradient(145deg, #ef5350, #c62828)' },
-        { classe: 'tema-5', cor: '#ffb74d', botao: 'linear-gradient(145deg, #ffb74d, #ef6c00)' },
-        { classe: 'tema-6', cor: '#80cbc4', botao: 'linear-gradient(145deg, #80cbc4, #00695c)' },
-        { classe: 'tema-7', cor: '#b39ddb', botao: 'linear-gradient(145deg, #b39ddb, #5e35b1)' },
-        { classe: 'tema-8', cor: '#ffd54f', botao: 'linear-gradient(145deg, #ffd54f, #ff8f00)' }
-      ];
-      const tema = temas[Math.min(nivel, temas.length - 1)];
-      document.body.className = tema.classe;
-      scoreEl.style.color = tema.cor;
-      titulo.style.color = tema.cor;
-      btn.style.background = tema.botao;
-      btn.style.boxShadow = `0 10px 30px ${tema.cor}66`;
+      const cores = ['#00ffcc', '#4fc3f7', '#ce93d8', '#ef5350', '#ffb74d', '#80cbc4', '#b39ddb', '#ffd54f'];
+      const cor = cores[Math.min(nivel, cores.length - 1)];
+      scoreEl.style.color = cor;
+      titulo.style.color = cor;
+      btn.style.background = `linear-gradient(145deg, ${cor}, ${cor}cc)`;
+      btn.style.boxShadow = `0 10px 30px ${cor}66`;
     }
 
     function criarParticulas(x, y, cor, qtdBase = 18) {
@@ -1018,10 +1115,8 @@
       }
     }
 
-    // ========== CLIQUE PRINCIPAL ==========
     btn.addEventListener('click', (e) => {
       if (bloqueadoPorAutoClick) return;
-
       if (detectarAutoClick()) {
         bloquearPorAutoClick();
         return;
@@ -1044,7 +1139,6 @@
       if (roll < chance) {
         score = 0;
         tocarSom('reset');
-
         if (cfg.flash) {
           flash.classList.add('show');
           setTimeout(() => flash.classList.remove('show'), 160);
@@ -1054,7 +1148,6 @@
           setTimeout(() => document.body.style.transform = 'translate(-4px, 3px)', 50);
           setTimeout(() => document.body.style.transform = 'translate(0,0)', 160);
         }
-
         resetMsg.classList.add('show');
         setTimeout(() => resetMsg.classList.remove('show'), 1400);
         criarParticulas(window.innerWidth/2, window.innerHeight/2, '#ff3355', 28);
@@ -1068,18 +1161,15 @@
         }
         score += ganho;
         tocarSom(foiCritico ? 'critico' : 'click');
-
         if (cfg.animScore) {
           scoreEl.classList.add('pop');
           setTimeout(() => scoreEl.classList.remove('pop'), 160);
         }
-
         if (foiCritico) {
           criticoMsg.classList.add('show');
           setTimeout(() => criticoMsg.classList.remove('show'), 900);
           criarParticulas(window.innerWidth/2, window.innerHeight/2 - 60, '#ff9ff3', 20);
         }
-
         if (score > recorde) {
           recorde = score;
           localStorage.setItem('recordeBotao', recorde);
@@ -1144,7 +1234,6 @@
       atualizarBotoesUpgrade();
     });
 
-    // Inicialização
     recordeEl.textContent = recorde;
     document.getElementById('custoPontos').textContent = custoPontos;
     document.getElementById('custoSorte').textContent = custoSorte;
