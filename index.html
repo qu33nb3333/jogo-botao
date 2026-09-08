@@ -46,19 +46,25 @@
     }
     button#btn:hover { filter: brightness(1.12); transform: scale(1.03); }
     button#btn:active { transform: scale(0.92); }
+    button#btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      filter: grayscale(0.7);
+    }
     .ripple {
       position: absolute; border-radius: 50%; background: rgba(255,255,255,0.45);
       transform: scale(0); animation: ripple 0.6s linear; pointer-events: none;
     }
     @keyframes ripple { to { transform: scale(4); opacity: 0; } }
-    .reset-msg, .recorde-msg, .critico-msg {
+    .reset-msg, .recorde-msg, .critico-msg, .anticheat-msg {
       margin-top: 16px; font-size: 1.35rem; font-weight: bold; height: 28px;
       opacity: 0; transition: opacity 0.3s, transform 0.3s; transform: translateY(10px);
     }
     .reset-msg { color: #ff4d4d; text-shadow: 0 0 15px #ff0000; }
     .recorde-msg { color: #ffd700; text-shadow: 0 0 20px #ffd700; }
     .critico-msg { color: #ff9ff3; text-shadow: 0 0 15px #ff9ff3; }
-    .reset-msg.show, .recorde-msg.show, .critico-msg.show { opacity: 1; transform: translateY(0); }
+    .anticheat-msg { color: #ff9f43; text-shadow: 0 0 15px #ff9f43; }
+    .reset-msg.show, .recorde-msg.show, .critico-msg.show, .anticheat-msg.show { opacity: 1; transform: translateY(0); }
     .upgrades {
       margin-top: 28px; display: flex; flex-wrap: wrap; gap: 12px;
       justify-content: center; max-width: 700px;
@@ -370,6 +376,7 @@
   <div class="reset-msg" id="resetMsg">💥 RESETADO!</div>
   <div class="recorde-msg" id="recordeMsg">🎉 NOVO RECORDE!</div>
   <div class="critico-msg" id="criticoMsg">⚡ CRÍTICO!</div>
+  <div class="anticheat-msg" id="anticheatMsg">🚫 Auto-click detectado!</div>
 
   <div class="upgrades">
     <button class="upgrade-btn" id="upPontos">
@@ -388,7 +395,7 @@
 
   <div class="info">
     A cada 10 pontos o visual muda.<br>
-    Use as Configurações para gráficos e música.
+    Anti Auto-Click ativado.
   </div>
 
   <!-- CHAT -->
@@ -473,6 +480,52 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
+
+    // ========== ANTI AUTO-CLICK ==========
+    let lastClickTime = 0;
+    let clickTimestamps = [];
+    let bloqueadoPorAutoClick = false;
+    const MIN_INTERVALO = 50;        // mínimo 50ms entre cliques
+    const MAX_CPS = 14;             // máximo de cliques por segundo permitido
+    const JANELA_TEMPO = 1000;      // 1 segundo
+    const TEMPO_BLOQUEIO = 3000;    // bloqueia por 3 segundos se detectar
+
+    function detectarAutoClick() {
+      const agora = Date.now();
+
+      // Remove timestamps antigos (fora da janela de 1 segundo)
+      clickTimestamps = clickTimestamps.filter(t => agora - t < JANELA_TEMPO);
+      clickTimestamps.push(agora);
+
+      // Verifica intervalo mínimo
+      if (agora - lastClickTime < MIN_INTERVALO) {
+        return true;
+      }
+
+      // Verifica se passou do limite de CPS
+      if (clickTimestamps.length > MAX_CPS) {
+        return true;
+      }
+
+      lastClickTime = agora;
+      return false;
+    }
+
+    function bloquearPorAutoClick() {
+      if (bloqueadoPorAutoClick) return;
+      bloqueadoPorAutoClick = true;
+      btn.disabled = true;
+
+      const msg = document.getElementById('anticheatMsg');
+      msg.classList.add('show');
+
+      setTimeout(() => {
+        bloqueadoPorAutoClick = false;
+        btn.disabled = false;
+        msg.classList.remove('show');
+        clickTimestamps = [];
+      }, TEMPO_BLOQUEIO);
+    }
 
     // ========== CONFIGURAÇÕES DE GRÁFICOS ==========
     let qualidade = localStorage.getItem('qualidadeGrafica') || 'medium';
@@ -622,14 +675,14 @@
 
     // ========== BOOST 2X ==========
     function atualizarBotao2x() {
-      const btn = document.getElementById('btnToggle2x');
-      if (!btn) return;
+      const btn2x = document.getElementById('btnToggle2x');
+      if (!btn2x) return;
       if (boost2xAtivo) {
-        btn.textContent = '⚡ 2x Clique ATIVADO (desativar)';
-        btn.style.background = '#00b894';
+        btn2x.textContent = '⚡ 2x Clique ATIVADO (desativar)';
+        btn2x.style.background = '#00b894';
       } else {
-        btn.textContent = '⚡ Ativar 2x Clique (Global)';
-        btn.style.background = '#0984e3';
+        btn2x.textContent = '⚡ Ativar 2x Clique (Global)';
+        btn2x.style.background = '#0984e3';
       }
     }
 
@@ -718,7 +771,6 @@
       }
     });
 
-    // RESET GLOBAL DE RECORDE PESSOAL
     document.getElementById('btnResetRecordeGlobal').addEventListener('click', async () => {
       if (!isAdmin) return;
       if (confirm('⚠️ Isso vai ZERAR o recorde pessoal de TODOS os jogadores na próxima vez que eles abrirem o jogo.\n\nTem certeza?')) {
@@ -979,7 +1031,16 @@
       }
     }
 
+    // ========== CLIQUE PRINCIPAL COM ANTI-AUTO CLICK ==========
     btn.addEventListener('click', (e) => {
+      // Anti Auto-Click
+      if (bloqueadoPorAutoClick) return;
+
+      if (detectarAutoClick()) {
+        bloquearPorAutoClick();
+        return;
+      }
+
       const rect = btn.getBoundingClientRect();
       const ripple = document.createElement('span');
       ripple.className = 'ripple';
