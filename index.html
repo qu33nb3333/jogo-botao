@@ -485,27 +485,18 @@
     let lastClickTime = 0;
     let clickTimestamps = [];
     let bloqueadoPorAutoClick = false;
-    const MIN_INTERVALO = 50;        // mínimo 50ms entre cliques
-    const MAX_CPS = 14;             // máximo de cliques por segundo permitido
-    const JANELA_TEMPO = 1000;      // 1 segundo
-    const TEMPO_BLOQUEIO = 3000;    // bloqueia por 3 segundos se detectar
+    const MIN_INTERVALO = 50;
+    const MAX_CPS = 14;
+    const JANELA_TEMPO = 1000;
+    const TEMPO_BLOQUEIO = 3000;
 
     function detectarAutoClick() {
       const agora = Date.now();
-
-      // Remove timestamps antigos (fora da janela de 1 segundo)
       clickTimestamps = clickTimestamps.filter(t => agora - t < JANELA_TEMPO);
       clickTimestamps.push(agora);
 
-      // Verifica intervalo mínimo
-      if (agora - lastClickTime < MIN_INTERVALO) {
-        return true;
-      }
-
-      // Verifica se passou do limite de CPS
-      if (clickTimestamps.length > MAX_CPS) {
-        return true;
-      }
+      if (agora - lastClickTime < MIN_INTERVALO) return true;
+      if (clickTimestamps.length > MAX_CPS) return true;
 
       lastClickTime = agora;
       return false;
@@ -538,9 +529,8 @@
       'ultra-high': { particulas: 40, shake: true,  animScore: true,  flash: true }
     };
 
-    // ========== MÚSICA ==========
-    const playlist = ["jfKfPfyJRdk", "5qap5aO4i9A", "DWcJFNfaw9c", "7NOSDKb0HlU", "lTRiuFIWV54"];
-    let musicaAtual = 0;
+    // ========== MÚSICA (Playlist que você pediu) ==========
+    const PLAYLIST_ID = "PLkPk39W2-NqxwAgJ6nau5odl4UckwXUn2";
     let musicaTocando = false;
     let ytPlayer = null;
 
@@ -550,12 +540,14 @@
 
     window.onYouTubeIframeAPIReady = function() {
       ytPlayer = new YT.Player('ytPlayer', {
-        height: '0', width: '0', videoId: playlist[0],
-        playerVars: { autoplay: 0, controls: 0 },
-        events: {
-          onStateChange: (e) => {
-            if (e.data === YT.PlayerState.ENDED) proximaMusica();
-          }
+        height: '0',
+        width: '0',
+        playerVars: {
+          listType: 'playlist',
+          list: PLAYLIST_ID,
+          autoplay: 0,
+          controls: 0,
+          loop: 1
         }
       });
     };
@@ -567,6 +559,7 @@
 
     function tocarMusica() {
       if (!ytPlayer) return;
+
       if (musicaTocando) {
         ytPlayer.pauseVideo();
         document.getElementById('btnMusica').textContent = '▶️ Tocar Música';
@@ -576,12 +569,6 @@
         document.getElementById('btnMusica').textContent = '⏸️ Pausar Música';
         musicaTocando = true;
       }
-    }
-
-    function proximaMusica() {
-      musicaAtual = (musicaAtual + 1) % playlist.length;
-      ytPlayer.loadVideoById(playlist[musicaAtual]);
-      ytPlayer.playVideo();
     }
 
     // ========== ESTADO ==========
@@ -1031,9 +1018,8 @@
       }
     }
 
-    // ========== CLIQUE PRINCIPAL COM ANTI-AUTO CLICK ==========
+    // ========== CLIQUE PRINCIPAL ==========
     btn.addEventListener('click', (e) => {
-      // Anti Auto-Click
       if (bloqueadoPorAutoClick) return;
 
       if (detectarAutoClick()) {
